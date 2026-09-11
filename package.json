@@ -1,0 +1,7 @@
+{
+  "name": "text-adventure-rpg",
+  "private": true,
+  "type": "module",
+  "version": "2.0.0",
+  "description": "书境奇游 · 文字冒险RPG 合集（纯前端 ESM，零运行时依赖）"
+}

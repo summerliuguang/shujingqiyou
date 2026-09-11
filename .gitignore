@@ -1,0 +1,9 @@
+# 系统与临时文件
+.DS_Store
+*.log
+*.tmp
+node_modules/
+__pycache__/
+
+# 云存档数据库与运行时数据
+server/data/

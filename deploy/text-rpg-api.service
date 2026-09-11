@@ -1,0 +1,15 @@
+[Unit]
+Description=书境奇游 云存档 API（SSO 认证 + SQLite）
+After=network.target sso.service
+
+[Service]
+Type=simple
+User=<user>
+WorkingDirectory=<项目目录>
+ExecStart=<node 绝对路径> <项目目录>/server/index.mjs 8322
+Environment=TEXT_RPG_DB=<项目目录>/server/data/tarpg.sqlite
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
