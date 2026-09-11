@@ -1,7 +1,12 @@
 /* ---------------- 游戏加载器：registry 摘要 + 按需动态 import ---------------- */
 import { GAMES, registerGame } from '../core/registry.js';
-import { REGISTRY } from '../../games/registry.js';
 import { validateDef } from '../core/validate.js';
+
+/* 注册表由 tools/mkregistry.mjs 生成；文件缺失时（公开仓库无数据包）以空库启动 */
+let REGISTRY = [];
+try {
+  ({ REGISTRY } = await import('../../games/registry.js'));
+} catch { /* 无注册表 → 空库 */ }
 
 const loading = new Map();
 

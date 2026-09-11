@@ -5,7 +5,8 @@
 CoC 跑团向（d100 检定/SAN 值/线索手册）两种玩法体系。
 
 **本仓库只包含平台引擎与工具**；各游戏的具体剧情数据包与 BGM 音频
-不随仓库分发（见 `games/README.md` 与 `assets/music/README.md`），
+不随仓库分发（见 `games/README.md` 与 `assets/music/README.md`，
+两者均已被 .gitignore 排除，本地放置自用不会误提交），
 你可以按数据包规范编写自己的游戏内容。
 
 ## 特性
@@ -42,6 +43,9 @@ python3 tools/serve.py 8321      # 静态服务 + TTS 代理（可选：node ser
 | `node tools/test-server.mjs` | 云存档 API 服务单测 |
 | `node tools/test-sync.mjs` | 同步语义端到端单测 |
 | `python3 tools/playall.py <url>` | 浏览器自动通玩门禁 |
+
+注：`balance` / `test-migrate` / `test-sync` / `smoke` 的有效运行需要先放入
+游戏数据包；空库时 `validate` 与浏览器启动仍可正常执行。
 
 设计与 DSL 详见 [DESIGN.md](DESIGN.md) 与 [docs/DESIGN-SPEC.md](docs/DESIGN-SPEC.md)。
 
