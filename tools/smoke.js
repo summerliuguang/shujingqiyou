@@ -37,7 +37,15 @@ for (const g of list) {
         if (lastEnd) break;
         const choices = TA.visibleChoices(s);
         const actionable = choices.filter(c => c.kind !== 'maphead');
-        if (!actionable.length) { throw new Error(`死头路: 场景 ${s.scene} 无可选项`); }
+        if (!actionable.length) {
+          // choose→enterScene→handleEnd 为异步链：结局场景可能已切换但 ENDING 未派发，
+          // 让出一个事件循环 tick 再判，规避微任务竞态误报
+          await new Promise(r => setTimeout(r, 0));
+          if (lastEnd) break;
+          const after = TA.visibleChoices(s).filter(c => c.kind !== 'maphead');
+          if (!after.length) { throw new Error(`死头路: 场景 ${s.scene} 无可选项`); }
+          continue;
+        }
         const pick = actionable[Math.floor(Math.random() * actionable.length)];
         if (pick.kind === 'choice') await TA.choose(s, pick.c, pick.idx);
         else if (pick.kind === 'travel') await TA.enterScene(s, pick.loc.scene, { via: 'user' });

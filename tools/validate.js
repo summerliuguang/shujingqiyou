@@ -182,6 +182,10 @@ for (const g of games) {
     }
     if (!en.hp || !en.name) err(`${g.id}: 敌人 ${eid} 缺少 hp/name`);
   }
+  /* 凡人境门槛：need 必须 > 0，否则开局即提示"冲击瓶颈"（进度 x/0） */
+  if ((g.realms || []).length && !(+g.realms[0].need > 0)) {
+    err(`${g.id}: realms[0]（初始境界）need 必须大于 0（当前 ${g.realms[0].need}），否则开局即可冲击瓶颈`);
+  }
   /* 结局收集核对 */
   const fnSceneTitles = new Set(sceneIds.flatMap(sid => sceneEndingTitles(g.scenes[sid] || {})));
   for (const e of (g.endings || [])) {

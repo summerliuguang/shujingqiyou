@@ -205,7 +205,7 @@ function renderChoices() {
       const b = btn('choice-btn' + (item.enabled ? '' : ' disabled') + (c.hot ? ' hot' : ''),
         `<span class="c-t">${TA.fmt(c.t, U.S)}</span>${c.sub ? `<span class="c-sub">${TA.esc(c.sub)}</span>` : ''}${!item.enabled && item.reason ? `<span class="c-reason">🔒 ${TA.esc(item.reason)}</span>` : ''}`);
       if (item.enabled) {
-        b.addEventListener('click', () => { TAAudio.sfx('click'); guard(TA.choose(U.S, c, item.idx)); });
+        b.addEventListener('click', () => { TAAudio.sfx('click'); paceRun('choice', () => TA.choose(U.S, c, item.idx)); });
       } else {
         b.title = item.reason || '条件未满足';
       }
@@ -213,18 +213,42 @@ function renderChoices() {
     } else if (item.kind === 'travel') {
       const l = item.loc;
       const b = btn('choice-btn travel', `<span class="c-t">${l.icon || '🚶'} 前往 · ${TA.esc(l.t)}</span>`);
-      b.addEventListener('click', () => guard((async () => {
+      b.addEventListener('click', () => paceRun('travel', async () => {
         TA.hooks.appendLog([{ cls: 'choice-echo', text: '▶ 前往 ' + l.t }]);
         await TA.enterScene(U.S, l.scene, { via: 'user' });
-      })()));
+      }));
       box.appendChild(b);
     } else if (item.kind === 'free') {
       const b = btn('choice-btn free' + (item.hot ? ' hot' : ''), `<span class="c-t">${item.t}</span>${item.sub ? `<span class="c-sub">${TA.esc(item.sub)}</span>` : ''}`);
-      b.addEventListener('click', () => guard(TA.freeAction(U.S, item.act)));
+      b.addEventListener('click', () => paceRun(item.act, () => TA.freeAction(U.S, item.act)));
       box.appendChild(b);
     }
   }
   if (!list.length) box.appendChild(el('div', 'dim center', '（此处暂无可做的事）'));
+}
+
+/* ---- 节奏层：动作先出"过程"横幅再结算，杜绝零等待的出结果 ---- */
+const PACE = {
+  travel: ['正在赶路……', 900],
+  cultivate: ['闭目凝神，吐纳周天……', 1200],
+  breakthrough: ['气机涌动，冲击瓶颈……', 1500],
+  explore: ['放慢脚步，仔细探查四周……', 900],
+  rest: ['寻了处背风地歇脚……', 700],
+  choice: ['……', 350],
+  back: ['……', 250],
+};
+function paceRun(kind, fn) {
+  if (U.busy) return;
+  const [label, ms] = PACE[kind] || PACE.choice;
+  const box = document.querySelector('#choices');
+  if (box) {
+    box.innerHTML = '';
+    box.appendChild(el('div', 'pending', `<span class="p-ico">⏳</span><span class="p-txt">${TA.esc(label)}</span>`));
+  }
+  guard((async () => {
+    await new Promise(r => setTimeout(r, ms));
+    await fn();
+  })());
 }
 
 function guard(promise) {
@@ -232,6 +256,13 @@ function guard(promise) {
   U.busy = true;
   $('#choices').classList.add('locked');
   Promise.resolve(promise).catch(err => { console.error(err); TA.hooks.toast('发生错误：' + err.message); })
-    .finally(() => { U.busy = false; const c = $('#choices'); if (c) c.classList.remove('locked'); });
+    .finally(() => {
+      U.busy = false;
+      const c = $('#choices');
+      if (c) {
+        c.classList.remove('locked');
+        if (c.querySelector('.pending')) renderChoices();  // 无刷新路径下清掉 pending 横幅
+      }
+    });
 }
 

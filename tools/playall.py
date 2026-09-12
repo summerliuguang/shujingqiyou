@@ -45,13 +45,16 @@ def play_game(page, card, idx, errors, tag):
         choices = page.locator("#choices .choice-btn:not(.disabled)")
         n = choices.count()
         if not n:
+            if page.locator("#choices .pending").count():  # 节奏层等待中——稍候重试
+                page.wait_for_timeout(500)
+                continue
             break
         try:
             choices.nth(random.randrange(n)).click(timeout=3000)
         except Exception:
             # 浮层（战斗/结局）在点击间隙出现——回到循环头处理
             continue
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(600)
     status = f"结局[{ending}]" if ending else ("进行中" if page.locator("#choices").count() else "停在无选项处")
     print(f"  {'✅' if not errors else '❌'} {title}: {status} · console错误 {len(errors)}")
     if tag:  # 截图（仅第一个游戏）
