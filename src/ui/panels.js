@@ -84,7 +84,8 @@ export function openSettings() {
       syncRow.appendChild(el('span', 'dim', `已登录 ${sync.username} · 存档自动同步`));
     } else {
       const a = el('a', null, '未登录（不影响游玩）— 登录后多设备同步');
-      a.href = 'https://<局域网IP>:29010/login?back=' + encodeURIComponent(location.origin);
+      // SSO 登录页固定在 29010 端口；hostname 取当前访问地址，仓库无需硬编码局域网 IP
+      a.href = 'https://' + location.hostname + ':29010/login?back=' + encodeURIComponent(location.origin);
       a.target = '_blank';
       a.rel = 'noopener';
       syncRow.appendChild(a);

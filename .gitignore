@@ -20,3 +20,6 @@ server/data/
 *.tmp
 node_modules/
 __pycache__/
+
+# Go 版云存档 API 构建产物
+server-go/tarpg-api

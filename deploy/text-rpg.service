@@ -1,0 +1,15 @@
+# 书境奇游 systemd 服务（静态文件 + mimo TTS 代理），路径按实际环境修改
+[Unit]
+Description=Text Adventure RPG (shujing) static server + mimo TTS proxy
+After=network.target
+
+[Service]
+Type=simple
+User=<user>
+WorkingDirectory=<项目目录>
+ExecStart=/usr/bin/python3 tools/serve.py 8321
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
