@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS leaderboard_entries (
   achieved_at INTEGER NOT NULL,
   UNIQUE(user_id, game_id, board_id)
 );
+CREATE INDEX IF NOT EXISTS idx_lb_board ON leaderboard_entries (game_id, board_id, score);
 `;
 
 export function createApp({ verify, dbPath = ':memory:' } = {}) {
@@ -103,6 +104,7 @@ export function createApp({ verify, dbPath = ':memory:' } = {}) {
     });
   }
 
+  const lastTouch = new Map();   // user_id → 上次写 last_login 时间（节流 1h，防每请求写放大）
   async function authUser(req) {
     const username = await verify(req.headers.cookie || '');
     if (!username) return null;
@@ -111,8 +113,9 @@ export function createApp({ verify, dbPath = ':memory:' } = {}) {
     if (!row) {
       qUserIns.run(username, username, now, now);
       row = qUser.get(username);
-    } else {
+    } else if (now - (lastTouch.get(row.id) || 0) > 3600_000) {
       qUserTouch.run(now, row.id);
+      lastTouch.set(row.id, now);
     }
     return row;
   }

@@ -6,6 +6,7 @@ import { TAAudio } from '../audio/bgm.js';
 import { TAVoice } from '../audio/voice.js';
 import { $, view, el, btn, U } from './core.js';
 import { openChar, openInv, openSave, openQuests, openClues } from './panels.js';
+import { resetPlaytimeTick } from '../core/router.js';
 import { loadGame } from '../shell/game_loader.js';
 import { sync } from '../api/sync.js';
 
@@ -16,6 +17,7 @@ export async function startGame(gid, name, opts) {
   const s = TA.newGame(gid, name, opts);
   U.S = s;
   TA.setGid(gid);
+  resetPlaytimeTick();
   TAAudio.playBgm(TA.game(gid).bgm);
   TAVoice.stop();
   mountGameView();
@@ -24,6 +26,7 @@ export async function startGame(gid, name, opts) {
 export async function resumeGame(state) {
   U.S = TA.normalizeState(state);
   TA.setGid(state.gameId);
+  resetPlaytimeTick();
   let def;
   try { def = await loadGame(state.gameId); }
   catch (e) { TA.hooks.toast('读取失败：' + e.message); return; }

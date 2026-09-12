@@ -14,6 +14,15 @@ const SLOTS = ['auto', '0', '1', '2'];
 const SKEW_MS = 1000;
 
 const retryQueue = new Set();
+/* 同槽位 PUT 串行链：快速连续动作时保证到达顺序与写入顺序一致（last-write-wins） */
+const slotChains = new Map();
+function enqueuePush(gid, slot, snap) {
+  const key = `${gid}:${slot}`;
+  const prev = slotChains.get(key) || Promise.resolve();
+  const next = prev.catch(() => {}).then(() => push(gid, slot, snap));
+  slotChains.set(key, next);
+  next.finally(() => { if (slotChains.get(key) === next) slotChains.delete(key); });
+}
 
 function storeRemote(gid, slot, snap) {
   const store = saveStore(gid);
@@ -77,7 +86,7 @@ export const sync = {
 };
 
 bus.on(EV.SAVED, ({ gameId, slot, snapshot }) => {
-  if (sync.username && !sync.disabled) push(gameId, slot, snapshot);
+  if (sync.username && !sync.disabled) enqueuePush(gameId, slot, snapshot);
 });
 
 /* ---- 成就合并（最早解锁时间胜出，双向） ---- */

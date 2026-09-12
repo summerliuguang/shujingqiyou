@@ -69,15 +69,18 @@ GameDef
 
 ```
 text-adventure-rpg/
-├── index.html          # SPA 入口
-├── css/style.css       # 主题样式（每游戏可覆盖主题色）
-├── js/engine.js        # 状态/流转/条件/效果/战斗/骰子/存档
-├── js/ui.js            # 首页/建卡/游戏视图/面板/战斗/骰子渲染
-├── js/data/*.js        # registry + 9 个游戏数据
-├── tools/validate.js   # 数据完整性校验（Node）
-├── tools/smoke.js      # 无头随机通玩测试（Node）
-├── tools/balance.js    # 战斗数值平衡模拟（Node）
-└── DESIGN.md
+├── index.html            # SPA 入口（module 脚本 src/main.js）
+├── css/style.css         # 主题样式（每游戏可覆盖主题色）
+├── src/core/             # 引擎核心 ESM（state/actions/effects/router/save/cond/bus/api）
+├── src/modules/          # 通用模块（combat/skill_check/cultivation/story/quests/npc/clues/achievements/dungeon）
+├── src/shell/            # game_loader（registry + 懒加载数据包）
+├── src/ui/               # 渲染组件（core/home/create/view/panels/combat/ending/hub）
+├── src/api/              # 云同步客户端（client/sync）
+├── src/audio/            # BGM/音效与 TTS 语音
+├── games/<id>/           # 游戏数据包（manifest.json + data/*，不入公开仓库）
+├── server/               # 云存档/成就/排行 API（Node 零依赖 + SQLite）
+├── tools/                # validate / smoke / balance / playall / 各单测 / publish-public
+└── docs/                 # DESIGN-SPEC（v2 规范）与 REFACTOR_PLAN
 ```
 
 ## 六、氛围与语音

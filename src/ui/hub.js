@@ -118,7 +118,9 @@ export function openLeaderboard() {
       if (!gid || !board) return;
       box.innerHTML = '<p class="dim center">加载中……</p>';
       if (!sync.username) {
-        box.innerHTML = '<p class="dim">排行榜需要登录（设置 → ☁️ 云同步）。本地游玩不受影响。</p>';
+        box.innerHTML = '<p class="dim">排行榜需要登录。前往 <a href="https://<局域网IP>:29010/login?back=' +
+          encodeURIComponent(location.origin) + '" target="_blank" rel="noopener">统一登录</a>' +
+          '，登录后自动开启云同步。本地游玩不受影响。</p>';
         return;
       }
       const data = await api.getLeaderboard(gid, board);

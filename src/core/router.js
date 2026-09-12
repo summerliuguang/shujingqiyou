@@ -54,6 +54,8 @@ async function handleEnd(s, end) {
 
 /* ---------------- 游玩时长 ---------------- */
 let lastTick = Date.now();
+/* 切换游戏/新开局时重置计时基准，避免挂机时间计入下一个游戏 */
+function resetPlaytimeTick() { lastTick = Date.now(); }
 function tickPlaytime(s) {
   const now = Date.now();
   s.playtime = (s.playtime || 0) + Math.min(120, Math.floor((now - lastTick) / 1000));
@@ -67,4 +69,4 @@ function playtimeText(sec) {
   return Math.floor(m / 60) + ' 小时 ' + (m % 60) + ' 分';
 }
 
-export { resolveGoto, enterScene, handleEnd, tickPlaytime, playtimeText };
+export { resolveGoto, enterScene, handleEnd, tickPlaytime, playtimeText, resetPlaytimeTick };

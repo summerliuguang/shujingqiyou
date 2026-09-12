@@ -10,6 +10,7 @@ export const TAVoice = (function () {
   try { Object.assign(settings, JSON.parse(localStorage.getItem('tarpg:voice') || '{}')); } catch (e) {}
   let current = null;
   const cache = new Map();
+  const CACHE_MAX = 60;   // LRU 上限：防止长会话音频 URL 缓存无界增长
   let mimoOk = null; // null 未知 / true / false
 
   function save() { try { localStorage.setItem('tarpg:voice', JSON.stringify(settings)); } catch (e) {} }
@@ -61,7 +62,10 @@ export const TAVoice = (function () {
       if (!url) {
         url = await fetchMimo(text, settings.voice);
         cache.set(key, url);
+        if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);  // 淘汰最旧
         mimoOk = true;
+      } else {
+        cache.delete(key); cache.set(key, url);   // 命中即续期（LRU）
       }
       const el = new Audio(url);
       current = el;
