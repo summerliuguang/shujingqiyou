@@ -49,7 +49,7 @@ async function handleEnd(s, end) {
   tickPlaytime(s);
   recordEnding(s.gameId, end);
   autosave(s);
-  bus.emit(EV.ENDING, end);
+  bus.emit(EV.ENDING, { ...end, gameId: s.gameId, playtime: s.playtime || 0, realmIdx: s.realmIdx || 0 });
 }
 
 /* ---------------- 游玩时长 ---------------- */

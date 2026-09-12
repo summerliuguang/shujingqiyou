@@ -61,6 +61,23 @@ export function createApp({ verify, dbPath = ':memory:' } = {}) {
   const qPut = db.prepare(`INSERT INTO saves (user_id, game_id, slot, snapshot, updated_at) VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(user_id, game_id, slot) DO UPDATE SET snapshot = excluded.snapshot, updated_at = excluded.updated_at`);
   const qList = db.prepare('SELECT slot, updated_at FROM saves WHERE user_id = ? AND game_id = ?');
+  const qAchGet = db.prepare('SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = ? AND game_id = ?');
+  const qAchUp = db.prepare(`INSERT INTO user_achievements (user_id, game_id, achievement_id, unlocked_at) VALUES (?, ?, ?, ?)
+    ON CONFLICT(user_id, game_id, achievement_id) DO UPDATE SET unlocked_at = min(user_achievements.unlocked_at, excluded.unlocked_at)`);
+  const qScoreGet = db.prepare('SELECT score FROM leaderboard_entries WHERE user_id = ? AND game_id = ? AND board_id = ?');
+  const qScoreUp = db.prepare(`INSERT INTO leaderboard_entries (user_id, game_id, board_id, score, achieved_at) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, game_id, board_id) DO UPDATE SET score = excluded.score, achieved_at = excluded.achieved_at`);
+  const qLb = db.prepare(`SELECT u.sso_username AS username, le.score, le.achieved_at AS achievedAt
+    FROM leaderboard_entries le JOIN users u ON u.id = le.user_id
+    WHERE le.game_id = ? AND le.board_id = ?
+    ORDER BY le.score ${'ASC'}, le.achieved_at ASC LIMIT 50`);
+  const qLbDesc = db.prepare(`SELECT u.sso_username AS username, le.score, le.achieved_at AS achievedAt
+    FROM leaderboard_entries le JOIN users u ON u.id = le.user_id
+    WHERE le.game_id = ? AND le.board_id = ?
+    ORDER BY le.score ${'DESC'}, le.achieved_at ASC LIMIT 50`);
+  /* 越小越好的榜单（时间类）；其余越大越好 */
+  const MIN_BOARDS = new Set(['clear_time']);
+  const BOARDS = new Set(['clear_time', 'realm', 'achv', 'endings']);
 
   function json(res, status, obj) {
     const body = JSON.stringify(obj);
@@ -134,6 +151,51 @@ export function createApp({ verify, dbPath = ':memory:' } = {}) {
       }
       if ((m = url.pathname.match(/^\/api\/saves\/([a-z0-9_-]{1,64})$/)) && req.method === 'GET') {
         return json(res, 200, { slots: qList.all(user.id, m[1]) });
+      }
+
+      /* ---- 成就：按最早解锁时间合并 ---- */
+      if ((m = url.pathname.match(/^\/api\/achievements\/([a-z0-9_-]{1,64})$/))) {
+        const gid = m[1];
+        if (req.method === 'GET') {
+          const map = {};
+          for (const r of qAchGet.all(user.id, gid)) map[r.achievement_id] = r.unlocked_at;
+          return json(res, 200, { achievements: map });
+        }
+        if (req.method === 'PUT') {
+          const raw = await readBody(req);
+          let body;
+          try { body = JSON.parse(raw || '{}'); } catch { return json(res, 400, { error: 'JSON 解析失败' }); }
+          const inc = body && body.achievements;
+          if (!inc || typeof inc !== 'object') return json(res, 400, { error: '需 achievements 映射' });
+          for (const [id, ts] of Object.entries(inc)) {
+            if (!/^[\w\u4e00-\u9fa5-]{1,64}$/.test(id) || !Number.isFinite(ts)) return json(res, 400, { error: '成就格式不符' });
+            qAchUp.run(user.id, gid, id, Math.floor(ts));
+          }
+          const map = {};
+          for (const r of qAchGet.all(user.id, gid)) map[r.achievement_id] = r.unlocked_at;
+          return json(res, 200, { achievements: map });
+        }
+      }
+
+      /* ---- 分数上报与榜单 ---- */
+      if ((m = url.pathname.match(/^\/api\/score\/([a-z0-9_-]{1,64})\/([a-z_]{1,32})$/)) && req.method === 'PUT') {
+        const [, gid, board] = m;
+        if (!BOARDS.has(board)) return json(res, 400, { error: '未知榜单' });
+        const raw = await readBody(req);
+        let body;
+        try { body = JSON.parse(raw || '{}'); } catch { return json(res, 400, { error: 'JSON 解析失败' }); }
+        const score = body && body.score;
+        if (!Number.isFinite(score) || score < 0) return json(res, 400, { error: '分数需为非负数值' });
+        const prev = qScoreGet.get(user.id, gid, board);
+        const better = !prev || (MIN_BOARDS.has(board) ? score < prev.score : score > prev.score);
+        if (better) qScoreUp.run(user.id, gid, board, score, Date.now());
+        return json(res, 200, { score: better ? score : prev.score });
+      }
+      if ((m = url.pathname.match(/^\/api\/leaderboard\/([a-z0-9_-]{1,64})\/([a-z_]{1,32})$/)) && req.method === 'GET') {
+        const [, gid, board] = m;
+        if (!BOARDS.has(board)) return json(res, 400, { error: '未知榜单' });
+        const rows = (MIN_BOARDS.has(board) ? qLb : qLbDesc).all(gid, board);
+        return json(res, 200, { rows });
       }
       return json(res, 404, { error: '未知接口' });
     } catch (e) {

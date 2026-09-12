@@ -8,6 +8,7 @@ import { REGISTRY } from '../shell/game_loader.js';
 import { $, view, el, btn, U } from './core.js';
 import { showCreate } from './create.js';
 import { resumeGame } from './view.js';
+import { openProfile, openAchievements, openLeaderboard } from './hub.js';
 import { sync } from '../api/sync.js';
 import { toast } from './core.js';
 
@@ -27,6 +28,10 @@ export function showHome() {
   hero.appendChild(el('p', 'hero-sub', '踏入书页深处——修仙问鼎、古墓探幽、魔法纵横、屠龙猎奇，或在一个雨夜掷出命运的 d100。'));
   const totalEnds = REGISTRY.reduce((t, g) => t + Object.keys(TA.saves.endings(g.id)).length, 0);
   hero.appendChild(el('p', 'hero-stats', `${REGISTRY.length} 部作品 · 你已达成 <b>${totalEnds}</b> 个结局`));
+  const hubNav = el('div', 'hub-nav');
+  [['👤 个人资料', openProfile], ['🏆 成就殿堂', openAchievements], ['📊 排行榜', openLeaderboard]]
+    .forEach(([t, fn]) => hubNav.appendChild(btn('hub-btn', t, fn)));
+  wrap.appendChild(hubNav);
   wrap.appendChild(hero);
 
   const types = el('section', 'type-select');

@@ -36,4 +36,6 @@ export const EV = {
   ENDING: 'game:ending',    // 结局 ({title,text,kind})
   COMBAT: 'combat:start',   // 战斗开始，监听器返回 'win'|'lose'|'flee'
   SAVED: 'save:written',    // 本地存档已写入（云同步订阅后推送；后端不可达时静默）
+  ACHIEVEMENT: 'achievement:unlocked',  // 成就解锁 {gameId, id}
+  REALM_UP: 'realm:up',     // 境界突破 {gameId, realmIdx, name}
 };

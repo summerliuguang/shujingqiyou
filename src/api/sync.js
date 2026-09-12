@@ -5,7 +5,9 @@
  * 同源），整槽替换不做字段合并。未登录/离线一律静默跳过。
  */
 import { api, _configure } from './client.js';
-import { readSlot, saveStore, writeSaveStore } from '../core/save.js';
+import { readSlot, saveStore, writeSaveStore, endings } from '../core/save.js';
+import { achvStore } from '../core/achv.js';
+import { game } from '../core/registry.js';
 import { bus, EV } from '../core/bus.js';
 
 const SLOTS = ['auto', '0', '1', '2'];
@@ -66,6 +68,7 @@ export const sync = {
         if (await push(gid, slot, local)) actions.push({ slot, action: 'pushed' });
       }
     }
+    try { await mergeAchievements(gid); } catch { /* 静默 */ }
     return actions;
   },
 
@@ -75,6 +78,46 @@ export const sync = {
 
 bus.on(EV.SAVED, ({ gameId, slot, snapshot }) => {
   if (sync.username && !sync.disabled) push(gameId, slot, snapshot);
+});
+
+/* ---- 成就合并（最早解锁时间胜出，双向） ---- */
+async function mergeAchievements(gid) {
+  if (!sync.username || sync.disabled) return;
+  const local = achvStore(gid);
+  const remote = await api.getAchievements(gid);
+  if (!remote) return;
+  const inc = remote.achievements || {};
+  const merged = { ...local };
+  let pulled = false;
+  for (const [id, ts] of Object.entries(inc)) {
+    if (!merged[id] || merged[id].unlockedAt > ts) { merged[id] = { unlockedAt: ts }; pulled = true; }
+  }
+  if (pulled) writeAchvLocal(gid, merged);
+  const localOnly = Object.keys(local).some(id => !(id in inc));
+  if (localOnly || pulled) await api.putAchievements(gid, merged);
+}
+function writeAchvLocal(gid, map) {
+  try { localStorage.setItem('tarpg:v2:achv:' + gid, JSON.stringify(map)); } catch { /* 静默 */ }
+}
+
+/* ---- 分数上报（结局/突破/成就三类时机；fire-and-forget） ---- */
+function achvPoints(gid) {
+  const defs = (game(gid) || {}).achievements || {};
+  const got = achvStore(gid);
+  return Object.entries(defs).reduce((t, [id, a]) => t + (got[id] ? (a.points || 0) : 0), 0);
+}
+bus.on(EV.ENDING, ({ gameId, kind, playtime, realmIdx }) => {
+  if (!sync.username || sync.disabled || !gameId) return;
+  if (kind === 'true' || kind === 'normal') api.putScore(gameId, 'clear_time', playtime);
+  api.putScore(gameId, 'realm', realmIdx || 0);
+  api.putScore(gameId, 'endings', Object.keys(endings(gameId)).length);
+  api.putScore(gameId, 'achv', achvPoints(gameId));
+});
+bus.on(EV.REALM_UP, ({ gameId, realmIdx }) => {
+  if (sync.username && !sync.disabled && gameId) api.putScore(gameId, 'realm', realmIdx || 0);
+});
+bus.on(EV.ACHIEVEMENT, ({ gameId }) => {
+  if (sync.username && !sync.disabled && gameId) api.putScore(gameId, 'achv', achvPoints(gameId));
 });
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => { if (sync.username) flushQueue(); });

@@ -2,6 +2,7 @@
 import { game } from '../core/registry.js';
 import { roll } from '../core/dice.js';
 import { pushLine } from '../core/ctx.js';
+import { bus, EV } from '../core/bus.js';
 
 function realmNeed(s) {
   const r = (game(s.gameId).realms || [])[s.realmIdx];
@@ -22,6 +23,7 @@ function doRealmUp(ctx) {
   s.hpMax += r.hp || 15; s.mpMax += r.mp || 8; s.atk += r.atk || 3; s.def += r.def || 2;
   s.hp = s.hpMax; s.mp = s.mpMax;
   pushLine(ctx, 'skill', `🌟 <b>突破成功！</b>${oldName ? '由【' + oldName + '】晋入' : '晋入'}【${r.name}】！气血法力尽复，气机圆满。`);
+  bus.emit(EV.REALM_UP, { gameId: s.gameId, realmIdx: s.realmIdx, name: r.name });
   if (def.onRealmUp) def.onRealmUp(ctx);
   return true;
 }

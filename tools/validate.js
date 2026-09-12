@@ -14,6 +14,21 @@ const games = [];
 globalThis.window = globalThis;   // _shared/coc 求值期写 window.TA_DATA
 
 let errors = 0, warnings = 0;
+/* 函数式结局（['end', fn] / ending: {title: fn}）静态提取 title 字面量：
+   约定函数内以 title: '字面量' 形式返回各结局变体 */
+function fnTitles(fn) {
+  const out = [];
+  const re = /title:\s*'([^']+)'/g;
+  let m;
+  try { const src = Function.prototype.toString.call(fn); while ((m = re.exec(src))) out.push(m[1]); } catch { /* 取不到源码则跳过 */ }
+  return out;
+}
+function sceneEndingTitles(scene) {
+  const ed = scene.ending;
+  if (!ed) return [];
+  const t = typeof ed.title === 'function' ? fnTitles(ed.title) : [ed.title];
+  return t.filter(Boolean);
+}
 function err(msg) { errors++; console.log('  ❌ ' + msg); }
 function warn(msg) { warnings++; console.log('  ⚠️  ' + msg); }
 
@@ -58,6 +73,7 @@ for (const g of games) {
 
   const refs = new Set();   // goto 目标
   const hasEnding = new Set();
+  const BUILTIN_ENDINGS = new Set(['理智崩溃']);  // 引擎内置（SAN 归零合成）
 
   function fxWalk(fx, where, targets) {
     if (!fx) return;
@@ -105,7 +121,10 @@ for (const g of games) {
           if (t) { if (!g.scenes[t]) err(`${where}: goto 场景不存在 "${t}"`); refs.add(t); if (targets) targets.add(t); }
           break;
         }
-        case 'end': if (typeof a !== 'function') hasEnding.add(a); break;
+        case 'end':
+          if (typeof a === 'function') fnTitles(a).forEach(t => hasEnding.add(t));
+          else hasEnding.add(a);
+          break;
         case 'realmup': if (!(g.realms || []).length) err(`${where}: realmup 但游戏无境界表`); break;
         case 'hp': case 'mp': case 'san': case 'money': case 'exp': case 'heal': break;
         default: warn(`${where}: 未知效果类型 "${k}"`);
@@ -126,7 +145,7 @@ for (const g of games) {
   for (const [sid, sc] of Object.entries(g.scenes)) {
     const where = `${g.id}/${sid}`;
     fxWalk(sc.enter, where + '.enter');
-    if (sc.ending) hasEnding.add(sc.ending.title);
+    sceneEndingTitles(sc).forEach(t => hasEnding.add(t));
     (sc.choices || []).forEach((c, i) => {
       condWalk(c.req, `${where}#${i}.req`);
       condWalk(c.show, `${where}#${i}.show`);
@@ -164,8 +183,9 @@ for (const g of games) {
     if (!en.hp || !en.name) err(`${g.id}: 敌人 ${eid} 缺少 hp/name`);
   }
   /* 结局收集核对 */
+  const fnSceneTitles = new Set(sceneIds.flatMap(sid => sceneEndingTitles(g.scenes[sid] || {})));
   for (const e of (g.endings || [])) {
-    if (!hasEnding.has(e.title)) warn(`${g.id}: 结局清单 "${e.title}" 未在场景/效果中使用`);
+    if (!hasEnding.has(e.title) && !fnSceneTitles.has(e.title) && !BUILTIN_ENDINGS.has(e.title)) warn(`${g.id}: 结局清单 "${e.title}" 未在场景/效果中使用`);
   }
   for (const t of hasEnding) {
     if (!(g.endings || []).some(x => x.title === t)) warn(`${g.id}: 实际结局 "${t}" 未登记到 endings 清单`);
@@ -230,9 +250,13 @@ for (const g of games) {
     if (!reach2.has(sid)) err(`${g.id}/${sid}: 即使放开全部条件也无法到达（支线断链）`);
   }
   /* 结局可达性（全条件放开） */
+  const deathTitle = g.deathEnding && typeof g.deathEnding === 'object' ? g.deathEnding.title : null;
   for (const e of (g.endings || [])) {
+    if (deathTitle === e.title || BUILTIN_ENDINGS.has(e.title)) { continue; }  // 非死路
     const via = sceneIds.filter(sid => {
       const sc = g.scenes[sid];
+      const eTitles = sceneEndingTitles(sc);
+      if (eTitles.includes(e.title) && reach2.has(sid)) return true;
       if (sc.ending && sc.ending.title === e.title && reach2.has(sid)) return true;
       let ok = false;
       const scan = (fx) => {
@@ -241,6 +265,7 @@ for (const g of games) {
           if (!Array.isArray(x)) continue;
           if (x[0] === 'end' && typeof x[1] === 'object' && x[1] == null) continue;
           if (x[0] === 'end' && typeof x[1] === 'string' && x[1] === e.title && reach2.has(sid)) ok = true;
+          if (x[0] === 'end' && typeof x[1] === 'function' && fnTitles(x[1]).includes(e.title) && reach2.has(sid)) ok = true;
           if (x[0] === 'combat') fxTargets([x], []);
           if (x[0] === 'rand' && Array.isArray(x[1])) for (const row of x[1]) scan(row[1]);
           if (x[0] === 'check' && x[1]) for (const br of ['pass', 'fail', 'hard', 'extreme', 'fumble']) scan((x[1] || {})[br]);

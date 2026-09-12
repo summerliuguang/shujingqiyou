@@ -45,4 +45,22 @@ export const api = {
     const r = await req('PUT', `/api/saves/${gid}/${slot}`, { snapshot });
     return r.status === 200;
   },
+  /* 云端成就：200 → {achievements:{id:ts}}；无记录/离线 → null */
+  async getAchievements(gid) {
+    const r = await req('GET', `/api/achievements/${gid}`);
+    return r.status === 200 ? r.data : null;
+  },
+  async putAchievements(gid, map) {
+    const r = await req('PUT', `/api/achievements/${gid}`, { achievements: map });
+    return r.status === 200 ? r.data : null;
+  },
+  async putScore(gid, board, score) {
+    const r = await req('PUT', `/api/score/${gid}/${board}`, { score });
+    return r.status === 200;
+  },
+  /* 榜单：200 → {rows:[{username,score,achievedAt}]}；离线 → null */
+  async getLeaderboard(gid, board) {
+    const r = await req('GET', `/api/leaderboard/${gid}/${board}`);
+    return r.status === 200 ? r.data : null;
+  },
 };

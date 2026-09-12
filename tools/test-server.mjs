@@ -83,5 +83,41 @@ assert.equal((await call('PUT', '/api/saves/fanren/auto', { cookie: 'sess-alice'
 /* 10) 未知接口 404 */
 assert.equal((await call('GET', '/api/unknown', { cookie: 'sess-alice' })).status, 404);
 
+/* 11) 成就：PUT 合并（最早解锁时间胜出）+ GET */
+assert.deepEqual((await call('GET', '/api/achievements/fanren', { cookie: 'sess-alice' })).data.achievements, {}, '空成就应返回空映射');
+const a1 = await call('PUT', '/api/achievements/fanren', { cookie: 'sess-alice', body: { achievements: { wolf_killer: 2000, first_realm: 3000 } } });
+assert.equal(a1.status, 200);
+const a2 = await call('PUT', '/api/achievements/fanren', { cookie: 'sess-alice', body: { achievements: { wolf_killer: 1000 } } });  // 更早时间
+assert.equal(a2.data.achievements.wolf_killer, 1000, '合并应保留最早解锁时间');
+assert.equal(a2.data.achievements.first_realm, 3000, '已有成就不应被覆盖丢失');
+
+/* 12) 分数：clear_time 取最小，realm/achv 取最大 */
+const s1 = await call('PUT', '/api/scores', {});
+assert.notEqual(s1.status, 200);
+assert.equal((await call('PUT', '/api/score/fanren/clear_time', { cookie: 'sess-alice', body: { score: 500 } })).data.score, 500);
+assert.equal((await call('PUT', '/api/score/fanren/clear_time', { cookie: 'sess-alice', body: { score: 300 } })).data.score, 300, '更小通关时间应刷新');
+assert.equal((await call('PUT', '/api/score/fanren/clear_time', { cookie: 'sess-alice', body: { score: 800 } })).data.score, 300, '更大时间不应覆盖');
+assert.equal((await call('PUT', '/api/score/fanren/realm', { cookie: 'sess-alice', body: { score: 2 } })).data.score, 2);
+assert.equal((await call('PUT', '/api/score/fanren/realm', { cookie: 'sess-alice', body: { score: 5 } })).data.score, 5, '更大境界应刷新');
+assert.equal((await call('PUT', '/api/score/fanren/realm', { cookie: 'sess-alice', body: { score: 3 } })).data.score, 5, '更小境界不应覆盖');
+assert.equal((await call('PUT', '/api/score/fanren/bad_board', { cookie: 'sess-alice', body: { score: 1 } })).status, 400, '未知榜单 400');
+assert.equal((await call('PUT', '/api/score/fanren/achv', { cookie: 'sess-alice', body: { score: -1 } })).status, 400, '负分 400');
+
+/* 13) 榜单：排序方向 + 用户隔离 */
+await call('PUT', '/api/score/fanren/clear_time', { cookie: 'sess-bob', body: { score: 100 } });
+await call('PUT', '/api/score/fanren/realm', { cookie: 'sess-bob', body: { score: 7 } });
+const lb1 = await call('GET', '/api/leaderboard/fanren/clear_time', { cookie: 'sess-alice' });
+assert.equal(lb1.data.rows.length, 2);
+assert.equal(lb1.data.rows[0].username, 'bob', 'clear_time 应升序（bob 100 最小）');
+assert.equal(lb1.data.rows[0].score, 100);
+const lb2 = await call('GET', '/api/leaderboard/fanren/realm', { cookie: 'sess-bob' });
+assert.equal(lb2.data.rows[0].username, 'bob', 'realm 应降序（bob 7 最大）');
+assert.equal(lb2.data.rows[0].score, 7);
+
+/* 14) 成就/分数未登录 401 */
+assert.equal((await call('GET', '/api/achievements/fanren')).status, 401);
+assert.equal((await call('PUT', '/api/score/fanren/realm', { body: { score: 1 } })).status, 401);
+assert.equal((await call('GET', '/api/leaderboard/fanren/realm')).status, 401);
+
 server.close();
-console.log('✅ API 服务单测全部通过（10 组断言）');
+console.log('✅ API 服务单测全部通过（14 组断言）');
