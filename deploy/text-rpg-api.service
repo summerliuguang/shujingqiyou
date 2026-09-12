@@ -1,12 +1,14 @@
 [Unit]
-Description=书境奇游 云存档 API（SSO 认证 + SQLite）
+Description=书境奇游 云存档 API（SSO 认证 + SQLite, Go 版）
 After=network.target sso.service
 
 [Service]
 Type=simple
 User=<user>
 WorkingDirectory=<项目目录>
-ExecStart=<node 绝对路径> <项目目录>/server/index.mjs 8322
+# Go 版单二进制（server-go/），行为与原 Node 版 server/index.mjs 逐条对齐，
+# 数据库文件不变；SSO 地址默认 http://127.0.0.1:5090/whoami
+ExecStart=<项目目录>/server-go/tarpg-api -addr 127.0.0.1:8322 -db <项目目录>/server/data/tarpg.sqlite
 Environment=TEXT_RPG_DB=<项目目录>/server/data/tarpg.sqlite
 Restart=on-failure
 RestartSec=3

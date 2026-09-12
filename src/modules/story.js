@@ -44,7 +44,9 @@ function visibleChoices(s) {
   });
   if (scene.explorePool) list.push({ kind: 'free', act: 'explore', t: '🔍 探索周遭', sub: '搜寻此处的机缘与危险' });
   const hasRealm = (def.realms || []).length > 0;
-  if (scene.cultivate && hasRealm && s.realmIdx < def.realms.length - 1) {
+  /* cultivate 可为 true 或条件数组（如 [['skill','changchun']]——未习得功法不可修炼） */
+  const canCultivate = scene.cultivate && (scene.cultivate === true || testCond(scene.cultivate, s));
+  if (canCultivate && hasRealm && s.realmIdx < def.realms.length - 1) {
     list.push({ kind: 'free', act: 'cultivate', t: '🧘 打坐修炼', sub: `突破进度 ${s.exp}/${realmNeed(s)}` });
     if (s.exp >= realmNeed(s)) list.push({ kind: 'free', act: 'breakthrough', t: '⚡ 冲击瓶颈', sub: `尝试晋入【${(def.realms[s.realmIdx + 1] || {}).name}】`, hot: true });
   }

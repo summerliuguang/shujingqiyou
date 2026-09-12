@@ -150,6 +150,15 @@ for (const g of games) {
       condWalk(c.req, `${where}#${i}.req`);
       condWalk(c.show, `${where}#${i}.show`);
       fxWalk(c.fx, `${where}#${i}.fx`);
+      /* 无限收益嫌疑：正向 money/up/attr 且无 once/req/show 限制（探索池除外，属设计内刷法） */
+      if (Array.isArray(c.fx) && !c.once && !c.req && !c.show) {
+        for (const e of c.fx) {
+          if (!Array.isArray(e)) continue;
+          const amt = typeof e[1] === 'number' ? e[1] : (e[2] ?? 0);
+          if ((e[0] === 'money' || ((e[0] === 'up' || e[0] === 'attr') && amt > 0)) && amt > 0)
+            warn(`${where}#${i}: 选项可无限刷 ${e[0]}（无 once/req/show 限制）`);
+        }
+      }
       if (c.goto != null && typeof c.goto !== 'function') {
         if (!g.scenes[c.goto]) err(`${where}#${i}: goto 场景不存在 "${c.goto}"`);
         refs.add(c.goto);
