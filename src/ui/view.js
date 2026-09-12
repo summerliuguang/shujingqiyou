@@ -1,12 +1,12 @@
 /* ============================================================
  * 游戏视图：进入/续玩 / 叙事日志 / 顶栏 / 选项
  * ============================================================ */
-import { TA } from '../core/api.js';
+import { TA } from '../engine/api.js';
 import { TAAudio } from '../audio/bgm.js';
 import { TAVoice } from '../audio/voice.js';
 import { $, view, el, btn, U } from './core.js';
-import { openChar, openInv, openSave, openQuests, openClues } from './panels.js';
-import { resetPlaytimeTick } from '../core/router.js';
+import { openChar, openInv, openSave, openQuests, openClues, modal } from './panels.js';
+import { resetPlaytimeTick } from '../engine/router.js';
 import { loadGame } from '../shell/game_loader.js';
 import { sync } from '../api/sync.js';
 
@@ -31,6 +31,14 @@ export async function resumeGame(state) {
   try { def = await loadGame(state.gameId); }
   catch (e) { TA.hooks.toast('读取失败：' + e.message); return; }
   TAAudio.playBgm(def.bgm);
+  /* 闭关结算（idle 能力包）：读档时若在闭关中，弹出关结算 */
+  const settled = TA.settleSeclusion(U.S);
+  if (settled) {
+    TA.saves.autosave(U.S);
+    modal('🧘 出关', body => {
+      body.appendChild(el('div', 'scene-text', TA.esc(settled.msg)));
+    });
+  }
   // 兼容旧存档：场景被内容更新删除时回到起点
   if (!def.scenes[state.scene]) {
     TA.hooks.toast('存档场景已失效，回到故事起点');
@@ -154,13 +162,12 @@ function renderQuickStats() {
   const def = TA.game(U.S.gameId);
   const parts = [];
   parts.push(`<span class="qs" title="生命">❤️ ${U.S.hp}/${U.S.hpMax}</span>`);
-  if (def.type === 'coc') {
-    parts.push(`<span class="qs" title="理智">🧠 ${U.S.san}/${U.S.sanMax}</span>`);
-  } else if (U.S.mpMax > 0) {
+  if (def.type !== 'coc' && U.S.mpMax > 0) {
     parts.push(`<span class="qs" title="${(def.statLabels || {}).mp || '法力'}">🔮 ${U.S.mp}/${U.S.mpMax}</span>`);
   }
   if (def.moneyName) parts.push(`<span class="qs" title="${def.moneyName}">💰 ${U.S.money}</span>`);
-  if ((def.realms || []).length) parts.push(`<span class="qs realm" title="境界">${(def.realms[U.S.realmIdx] || {}).name || ''}</span>`);
+  /* 能力包注入的资源条（境界/理智/……） */
+  for (const chip of TA.packChips(U.S, def)) parts.push(chip);
   parts.push(`<button class="icon-btn" id="btn-bgm" title="背景音乐开关">${TAAudio.isBgmOn() ? '🔊' : '🔇'}</button>`);
   parts.push(`<button class="icon-btn" id="btn-voice" title="语音朗读模式">${TAVoice.mode === 'off' ? '💬' : '📢'}</button>`);
   if (Object.keys(def.quests || {}).length || (U.S.quests || []).length) parts.push(`<button class="icon-btn" data-panel="quests" title="任务">📋</button>`);
@@ -194,6 +201,25 @@ function renderChoices() {
   const box = $('#choices');
   if (!box) return;
   box.innerHTML = '';
+  /* AI KP 自由行动输入框（模组/场景开启 kp 时） */
+  if (TA.kpEnabled && TA.kpEnabled(U.S) && !U.busy) {
+    const kpWrap = el('div', 'kp-input');
+    const inp = el('input');
+    inp.type = 'text';
+    inp.maxLength = 200;
+    inp.placeholder = '✍️ 想做什么都可以告诉 KP……（回车送出）';
+    const send = () => {
+      const v = inp.value.trim();
+      if (!v || U.busy) return;
+      kpWrap.querySelector('button').disabled = true;
+      paceRun('choice', ['KP 正在回应……', 400], () => TA.kpFreeInput(U.S, v));
+    };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+    const sendBtn = btn('btn solid sm', '送出', send);
+    kpWrap.appendChild(inp);
+    kpWrap.appendChild(sendBtn);
+    box.appendChild(kpWrap);
+  }
   const list = TA.visibleChoices(U.S);
   for (const item of list) {
     if (item.kind === 'maphead') {
@@ -205,7 +231,7 @@ function renderChoices() {
       const b = btn('choice-btn' + (item.enabled ? '' : ' disabled') + (c.hot ? ' hot' : ''),
         `<span class="c-t">${TA.fmt(c.t, U.S)}</span>${c.sub ? `<span class="c-sub">${TA.esc(c.sub)}</span>` : ''}${!item.enabled && item.reason ? `<span class="c-reason">🔒 ${TA.esc(item.reason)}</span>` : ''}`);
       if (item.enabled) {
-        b.addEventListener('click', () => { TAAudio.sfx('click'); paceRun('choice', () => TA.choose(U.S, c, item.idx)); });
+        b.addEventListener('click', () => { TAAudio.sfx('click'); paceRun('choice', null, () => TA.choose(U.S, c, item.idx)); });
       } else {
         b.title = item.reason || '条件未满足';
       }
@@ -213,33 +239,32 @@ function renderChoices() {
     } else if (item.kind === 'travel') {
       const l = item.loc;
       const b = btn('choice-btn travel', `<span class="c-t">${l.icon || '🚶'} 前往 · ${TA.esc(l.t)}</span>`);
-      b.addEventListener('click', () => paceRun('travel', async () => {
+      b.addEventListener('click', () => paceRun('travel', null, async () => {
         TA.hooks.appendLog([{ cls: 'choice-echo', text: '▶ 前往 ' + l.t }]);
         await TA.enterScene(U.S, l.scene, { via: 'user' });
       }));
       box.appendChild(b);
     } else if (item.kind === 'free') {
       const b = btn('choice-btn free' + (item.hot ? ' hot' : ''), `<span class="c-t">${item.t}</span>${item.sub ? `<span class="c-sub">${TA.esc(item.sub)}</span>` : ''}`);
-      b.addEventListener('click', () => paceRun(item.act, () => TA.freeAction(U.S, item.act)));
+      b.addEventListener('click', () => paceRun(item.act, item.pace, () => TA.freeAction(U.S, item.act)));
       box.appendChild(b);
     }
   }
   if (!list.length) box.appendChild(el('div', 'dim center', '（此处暂无可做的事）'));
 }
 
-/* ---- 节奏层：动作先出"过程"横幅再结算，杜绝零等待的出结果 ---- */
+/* ---- 节奏层：动作先出"过程"横幅再结算，杜绝零等待的出结果 ----
+ * 引擎通用行动用 PACE 缺省；能力包行动自带 pace（[文案, 毫秒]）。 */
 const PACE = {
   travel: ['正在赶路……', 900],
-  cultivate: ['闭目凝神，吐纳周天……', 1200],
-  breakthrough: ['气机涌动，冲击瓶颈……', 1500],
   explore: ['放慢脚步，仔细探查四周……', 900],
   rest: ['寻了处背风地歇脚……', 700],
   choice: ['……', 350],
   back: ['……', 250],
 };
-function paceRun(kind, fn) {
+function paceRun(kind, pace, fn) {
   if (U.busy) return;
-  const [label, ms] = PACE[kind] || PACE.choice;
+  const [label, ms] = pace || PACE[kind] || PACE.choice;
   const box = document.querySelector('#choices');
   if (box) {
     box.innerHTML = '';

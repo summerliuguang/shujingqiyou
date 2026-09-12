@@ -21,7 +21,7 @@ export function stubEnv() {
 
 export async function loadEngine() {
   stubEnv();
-  const { TA } = await import('../src/core/api.js');
+  const { TA } = await import('../src/engine/api.js');
   return TA;
 }
 

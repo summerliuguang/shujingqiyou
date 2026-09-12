@@ -22,6 +22,7 @@ import (
 	"io"
 	"log"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -304,6 +305,11 @@ func (s *apiServer) handle(w http.ResponseWriter, r *http.Request) {
 		default:
 			errJSON(w, 404, "未知接口")
 		}
+		return
+	}
+
+	if path == "/api/kp/chat" {
+		s.handleKpChat(w, r, user)
 		return
 	}
 
@@ -636,13 +642,17 @@ func main() {
 		lastTouch: map[int64]time.Time{},
 	}
 
-	log.Printf("书境奇游 API(Go): http://%s/api/ （DB: %s，认证: %s）", *addr, db, whoami)
+	ln, err := net.Listen("tcp", *addr)
+	if err != nil {
+		log.Fatalf("监听失败: %v", err)
+	}
+	/* -addr :0 时打印内核实际分配的端口（测试依赖此日志提取端口） */
+	log.Printf("书境奇游 API(Go): http://%s/api/ （DB: %s，认证: %s）", ln.Addr().String(), db, whoami)
 	server := &http.Server{
-		Addr:              *addr,
 		Handler:           http.HandlerFunc(srv.handle),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	if err := server.ListenAndServe(); err != nil {
+	if err := server.Serve(ln); err != nil {
 		log.Fatalf("退出: %v", err)
 	}
 }

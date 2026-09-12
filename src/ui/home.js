@@ -1,7 +1,7 @@
 /* ============================================================
  * 首页：书阁 / 游戏卡片
  * ============================================================ */
-import { TA } from '../core/api.js';
+import { TA } from '../engine/api.js';
 import { TAAudio } from '../audio/bgm.js';
 import { TAVoice } from '../audio/voice.js';
 import { REGISTRY } from '../shell/game_loader.js';

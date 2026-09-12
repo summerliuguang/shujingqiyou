@@ -404,3 +404,9 @@ body.low-hp::after {
 @keyframes pendsway{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 .pending .p-txt::after{content:'…';animation:pdot 1.2s steps(4) infinite}
 @keyframes pdot{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+
+/* ---- AI KP 自由行动输入 ---- */
+.kp-input{display:flex;gap:8px;margin-bottom:10px}
+.kp-input input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--text);font-size:.95em;min-width:0}
+.kp-input input:focus{outline:none;border-color:var(--accent)}
+.kp-input .btn{flex-shrink:0}

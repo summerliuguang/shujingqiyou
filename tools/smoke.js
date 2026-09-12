@@ -4,7 +4,7 @@
  * 用法：node tools/smoke.js [游戏id] [步数]
  * ============================================================ */
 import { boot } from './_loader.mjs';
-import { bus, EV } from '../src/core/bus.js';
+import { bus, EV } from '../src/engine/bus.js';
 
 const TA = await boot();
 

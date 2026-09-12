@@ -63,4 +63,11 @@ export const api = {
     const r = await req('GET', `/api/leaderboard/${gid}/${board}`);
     return r.status === 200 ? r.data : null;
   },
+  /* AI KP：200 → {text}；401=未登录 502=网关错误 503=未配置；超时 12s（KP 响应较慢） */
+  async kpChat(messages) {
+    cfg.timeoutMs = 12000;
+    const r = await req('POST', '/api/kp/chat', { messages });
+    cfg.timeoutMs = 3000;
+    return { status: r.status, data: r.data };
+  },
 };

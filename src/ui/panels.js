@@ -1,7 +1,7 @@
 /* ============================================================
  * 面板：弹窗框架 / 菜单 / 氛围设置 / 角色 / 背包 / 存档 / 任务 / 线索
  * ============================================================ */
-import { TA } from '../core/api.js';
+import { TA } from '../engine/api.js';
 import { TAAudio } from '../audio/bgm.js';
 import { TAVoice } from '../audio/voice.js';
 import { $, el, btn, U, savePrefs } from './core.js';
@@ -10,18 +10,20 @@ import { resumeGame } from './view.js';
 import { sync } from '../api/sync.js';
 
 /* ---------------- 通用弹窗 / 面板 ---------------- */
-export function modal(title, buildBody, cls) {
+export function modal(title, buildBody, cls, onClose) {
   const root = $('#modal-root');
   const overlay = el('div', 'modal-overlay');
   const panel = el('div', 'modal-panel ' + (cls || ''));
   panel.appendChild(el('div', 'modal-head', `<b>${title}</b>`));
-  const close = btn('icon-btn', '✕', () => overlay.remove());
+  /* onClose：任何关闭路径（✕ / 点遮罩）都会回调——供 bus.call 类
+   * 交互弹窗（炼丹/秘境）resolve，避免 Promise 悬挂 */
+  const close = btn('icon-btn', '✕', () => { overlay.remove(); if (onClose) onClose(); });
   panel.querySelector('.modal-head').appendChild(close);
   const body = el('div', 'modal-body');
   buildBody(body, overlay);
   panel.appendChild(body);
   overlay.appendChild(panel);
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); if (onClose) onClose(); } });
   root.appendChild(overlay);
   return overlay;
 }
@@ -84,8 +86,7 @@ export function openSettings() {
       syncRow.appendChild(el('span', 'dim', `已登录 ${sync.username} · 存档自动同步`));
     } else {
       const a = el('a', null, '未登录（不影响游玩）— 登录后多设备同步');
-      // SSO 登录页固定在 29010 端口；hostname 取当前访问地址，仓库无需硬编码局域网 IP
-      a.href = 'https://' + location.hostname + ':29010/login?back=' + encodeURIComponent(location.origin);
+      a.href = 'https://<局域网IP>:29010/login?back=' + encodeURIComponent(location.origin);
       a.target = '_blank';
       a.rel = 'noopener';
       syncRow.appendChild(a);

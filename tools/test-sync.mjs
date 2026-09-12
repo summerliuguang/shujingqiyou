@@ -8,8 +8,8 @@ import assert from 'node:assert/strict';
 import { createApp } from '../server/app.mjs';
 import { boot } from './_loader.mjs';
 import { sync } from '../src/api/sync.js';
-import { saveStore, writeSaveStore } from '../src/core/save.js';
-import { bus, EV } from '../src/core/bus.js';
+import { saveStore, writeSaveStore } from '../src/engine/save.js';
+import { bus, EV } from '../src/engine/bus.js';
 
 const SESSIONS = { 'sess-alice': 'alice' };
 const { server } = createApp({
@@ -61,33 +61,33 @@ const acts3 = await sync.reconcile('fanren');
 assert.equal(acts3.filter(a => a.slot === '2').length, 0, '1s 内偏差视为同源');
 
 /* 4) 云端有、本地无 → 拉取补齐 */
-const acts4 = await sync.reconcile('panlong');  // panlong 本地全空 → 无动作
+const acts4 = await sync.reconcile('coc_deadlight');  // panlong 本地全空 → 无动作
 assert.deepEqual(acts4, []);
-await fetch(`${base}/api/saves/panlong/auto`, {
+await fetch(`${base}/api/saves/coc_deadlight/auto`, {
   method: 'PUT', headers: { Cookie: 'sess-alice', 'Content-Type': 'application/json' },
-  body: JSON.stringify({ snapshot: { ...snap(7000), gameId: 'panlong' } }),
+  body: JSON.stringify({ snapshot: { ...snap(7000), gameId: 'coc_deadlight' } }),
 });
-const acts5 = await sync.reconcile('panlong');
+const acts5 = await sync.reconcile('coc_deadlight');
 assert.deepEqual(acts5, [{ slot: 'auto', action: 'pulled' }]);
-assert.equal(TA.saves.readSlot('panlong', 'auto').ts, 7000);
+assert.equal(TA.saves.readSlot('coc_deadlight', 'auto').ts, 7000);
 
 /* 5) 本地写入事件触发后台推送（EV.SAVED） */
-const s = TA.newGame('daomu', '同步员', {});
-putLocal('daomu', 'auto', snap(1));
+const s = TA.newGame('coc_deadlight', '同步员', { occ: '记者' });
+putLocal('coc_deadlight', 'auto', { ...snap(1), gameId: 'coc_deadlight' });
 s.scene = 'start';
 TA.saves.autosave(s);                       // 触发 EV.SAVED → push
 await new Promise(r => setTimeout(r, 300)); // 等 fire-and-forget 完成
-const remote = await (await fetch(`${base}/api/saves/daomu/auto`, { headers: { Cookie: 'sess-alice' } })).json();
+const remote = await (await fetch(`${base}/api/saves/coc_deadlight/auto`, { headers: { Cookie: 'sess-alice' } })).json();
 assert.ok(remote.snapshot, '自动档应已推送到云端');
 
 /* 6) 后端不可达 → 静默入队，恢复后冲刷 */
 sync._configure({ base: 'http://127.0.0.1:1/', cookie: 'sess-alice' });   // 指向不存在的端口
-putLocal('daomu', '0', snap(20000));
-const acts6 = await sync.reconcile('daomu');  // push 失败 → 入队
+putLocal('coc_deadlight', '0', { ...snap(20000), gameId: 'coc_deadlight' });
+const acts6 = await sync.reconcile('coc_deadlight');  // push 失败 → 入队
 assert.equal(acts6.filter(a => a.slot === '0').length, 0);
 sync._configure({ base, cookie: 'sess-alice' });
 await sync.init();                            // init 会冲刷队列
-const back2 = await (await fetch(`${base}/api/saves/daomu/0`, { headers: { Cookie: 'sess-alice' } })).json();
+const back2 = await (await fetch(`${base}/api/saves/coc_deadlight/0`, { headers: { Cookie: 'sess-alice' } })).json();
 assert.equal(back2.snapshot.ts, 20000, '队列应在恢复后冲刷推送');
 
 server.close();

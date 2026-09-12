@@ -1,7 +1,7 @@
 /* ============================================================
  * 结局浮层
  * ============================================================ */
-import { TA } from '../core/api.js';
+import { TA } from '../engine/api.js';
 import { TAAudio } from '../audio/bgm.js';
 import { TAVoice } from '../audio/voice.js';
 import { $, el, btn, U } from './core.js';

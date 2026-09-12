@@ -5,10 +5,10 @@
  * 同源），整槽替换不做字段合并。未登录/离线一律静默跳过。
  */
 import { api, _configure } from './client.js';
-import { readSlot, saveStore, writeSaveStore, endings } from '../core/save.js';
-import { achvStore } from '../core/achv.js';
-import { game } from '../core/registry.js';
-import { bus, EV } from '../core/bus.js';
+import { readSlot, saveStore, writeSaveStore, endings } from '../engine/save.js';
+import { achvStore } from '../engine/achv.js';
+import { game } from '../engine/registry.js';
+import { bus, EV } from '../engine/bus.js';
 
 const SLOTS = ['auto', '0', '1', '2'];
 const SKEW_MS = 1000;

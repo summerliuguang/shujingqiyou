@@ -10,6 +10,8 @@ WorkingDirectory=<项目目录>
 # 数据库文件不变；SSO 地址默认 http://127.0.0.1:5090/whoami
 ExecStart=<项目目录>/server-go/tarpg-api -addr 127.0.0.1:8322 -db <项目目录>/server/data/tarpg.sqlite
 Environment=TEXT_RPG_DB=<项目目录>/server/data/tarpg.sqlite
+# AI KP 凭据（deploy/tarpg-kp.env 600 权限，已 gitignore；缺失时 KP 端点 503 降级）
+EnvironmentFile=<项目目录>/deploy/tarpg-kp.env
 Restart=on-failure
 RestartSec=3
 

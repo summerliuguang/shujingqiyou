@@ -1,7 +1,7 @@
 /* ============================================================
  * UI 基础：DOM 助手 / 共享 UI 状态 / Toast
  * ============================================================ */
-import { TA } from '../core/api.js';
+import { TA } from '../engine/api.js';
 
 export const $ = sel => document.querySelector(sel);
 export const view = () => $('#view');

@@ -1,11 +1,11 @@
 # 书境奇游 · 文字冒险 RPG —— 设计文档（v1 现行实现）
 
-纯前端（零依赖、免构建）的文字冒险 RPG 合集：6 部知名网络小说改编 + 3 个 CoC（克苏鲁的呼唤）跑团模组。
+纯前端（零依赖、免构建）的文字冒险 RPG 合集：网络小说改编 + CoC（克苏鲁的呼唤）跑团模组。
 所有内容本地运行，存档写入 localStorage。
 
-> v2 目标架构（数据包 manifest 化、引擎 ESM 模块化、后端云存档/成就/排行榜）见
-> [docs/DESIGN-SPEC.md](docs/DESIGN-SPEC.md)，迁移步骤见 [docs/REFACTOR_PLAN.md](docs/REFACTOR_PLAN.md)。
-> 本文档描述的 DSL 与公式在 v2 中全部保留，是现行实现的事实记录。
+> **v3 现行架构**（引擎装配制 + 修仙四系统 + AI KP）见 [docs/V3-DESIGN.md](docs/V3-DESIGN.md)；
+> v2 规范（数据包/存档/同步/成就/榜单）见 [docs/DESIGN-SPEC.md](docs/DESIGN-SPEC.md)。
+> 本文档描述的 DSL 与公式在 v2/v3 中全部保留，是 DSL 语义的事实记录。
 
 ## 一、调研结论（GitHub 参考项目）
 

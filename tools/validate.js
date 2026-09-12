@@ -110,6 +110,17 @@ for (const g of games) {
         case 'npc': if (!g.npcs || !g.npcs[a]) warn(`${where}: NPC 未定义 "${a}"`); break;
         case 'clue': if (!g.clues || !g.clues[a]) warn(`${where}: 线索未定义 "${a}"`); break;
         case 'dungeon': if (!g.dungeons || !g.dungeons[a]) err(`${where}: 副本未定义 "${a}"`); break;
+        case 'expedition': if (!g.expeditions || !g.expeditions[a]) err(`${where}: 秘境未定义 "${a}"`); break;
+        case 'formation': {
+          if (!g.formations || !g.formations[a]) { err(`${where}: 阵法未定义 "${a}"`); break; }
+          const enemy = e[2];
+          if (enemy && (!g.enemies || !g.enemies[enemy])) err(`${where}: 阵法战斗敌人未定义 "${enemy}"`);
+          for (const t of [e[3], e[4], e[5]]) {
+            if (t != null && !g.scenes[t]) err(`${where}: 阵法战斗跳转场景不存在 "${t}"`);
+            if (t) refs.add(t);
+          }
+          break;
+        }
         case 'cocskill': break;
         case 'rand': {
           if (!Array.isArray(a)) { err(`${where}: rand 表不是数组`); break; }

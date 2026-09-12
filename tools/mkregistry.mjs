@@ -13,8 +13,8 @@ const GAMES = path.join(ROOT, 'games');
 globalThis.window = globalThis;   // _shared/coc 求值期写 window.TA_DATA
 
 const MODULES = {
-  novel: ['story', 'attributes', 'inventory', 'quests', 'npc', 'combat', 'cultivation', 'dungeon', 'achievements', 'maps'],
-  coc: ['story', 'attributes', 'inventory', 'quests', 'npc', 'skill_check', 'sanity', 'clues', 'achievements', 'maps'],
+  novel: ['checks', 'npc', 'quests', 'achievements', 'cultivation', 'combat', 'dungeon'],
+  coc: ['checks', 'npc', 'quests', 'achievements', 'combat', 'sanity', 'clues', 'cocchar'],
 };
 
 const ids = fs.readdirSync(GAMES).filter(d => !d.startsWith('_') && fs.existsSync(path.join(GAMES, d, 'data', 'index.js'))).sort();
@@ -40,7 +40,7 @@ for (const id of ids) {
     length: def.length,
     entry: 'data/index.js',
     startNode: def.start,
-    modules: MODULES[def.type] || MODULES.novel,
+    modules: def.modules || MODULES[def.type] || MODULES.novel,
     theme: def.theme,
     audio: { bgm: def.bgm, narr: def.narr },
     saveVersion: 2,

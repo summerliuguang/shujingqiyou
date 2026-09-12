@@ -14,12 +14,13 @@ games/registry.js
 # 云存档数据库与运行时数据
 server/data/
 
+# Go 二进制（构建产物）与 AI KP 凭据
+server-go/tarpg-api
+deploy/tarpg-kp.env
+
 # 系统与临时文件
 .DS_Store
 *.log
 *.tmp
 node_modules/
 __pycache__/
-
-# Go 版云存档 API 构建产物
-server-go/tarpg-api

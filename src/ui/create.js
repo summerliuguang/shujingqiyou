@@ -1,7 +1,7 @@
 /* ============================================================
  * 建卡：小说 / CoC 调查员
  * ============================================================ */
-import { TA } from '../core/api.js';
+import { TA } from '../engine/api.js';
 import { $, view, el, btn, U } from './core.js';
 import { startGame } from './view.js';
 import { showHome } from './home.js';

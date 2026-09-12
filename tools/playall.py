@@ -102,7 +102,7 @@ def main():
         for e in total_errors[:10]:
             print("   ", e[:200])
         sys.exit(1)
-    print("✅ 浏览器通玩门禁通过：9 游戏 0 console 错误")
+    print(f"✅ 浏览器通玩门禁通过：{count} 游戏 0 console 错误")
 
 
 if __name__ == "__main__":

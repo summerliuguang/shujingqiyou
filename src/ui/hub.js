@@ -2,13 +2,13 @@
  * 个人中心：个人资料（名片）/ 成就殿堂 / 排行榜
  * 数据：结局收集与成就收集为本地全局库；榜单来自云 API（未登录/离线给出提示）
  * ============================================================ */
-import { TA } from '../core/api.js';
+import { TA } from '../engine/api.js';
 import { REGISTRY, loadGame } from '../shell/game_loader.js';
 import { el, btn, U } from './core.js';
 import { modal } from './panels.js';
 import { sync } from '../api/sync.js';
 import { api } from '../api/client.js';
-import { achvStore } from '../core/achv.js';
+import { achvStore } from '../engine/achv.js';
 
 async function loadAllDefs() {
   await Promise.all(REGISTRY.map(g => loadGame(g.id).catch(() => null)));

@@ -121,3 +121,4 @@ assert.equal((await call('GET', '/api/leaderboard/fanren/realm')).status, 401);
 
 server.close();
 console.log('✅ API 服务单测全部通过（14 组断言）');
+
